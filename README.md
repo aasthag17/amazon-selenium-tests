@@ -36,6 +36,31 @@ You will see the steps interleaved, and eventually both prices printed:
   💰  iPhone Price  :  INR54,782.66
 ```
 
+---
+
+## Bonus: How to Run on LambdaTest Cloud
+
+This project is fully integrated with LambdaTest to run the tests on a cloud grid. 
+
+> ⚠️ **Important for Free Tier Users:** Free LambdaTest accounts only allow **1 concurrent session** and often place test requests into a **queue**, which can result in long wait times or timeouts while connecting.
+
+### Step 1 – Get Credentials
+1. Sign up/Log in at [lambdatest.com](https://www.lambdatest.com)
+2. Go to **Profile → Account Settings** to copy your **Username** and **Access Key**.
+
+### Step 2 – Run the Command
+Run the tests sequentially on LambdaTest (to comply with free tier concurrency limits) using the automated script:
+
+```bash
+./run_lambdatest.sh
+```
+
+*(This script automatically exports your credentials and uses the bundled Maven instance to start the test).*
+
+### Step 3 – View Results
+Once the execution finishes, you can view the video recordings and logs at the [LambdaTest Web Automation Dashboard](https://automation.lambdatest.com/build).
+
+---
 
 ## Tech Stack
 
