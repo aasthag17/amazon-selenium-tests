@@ -5,18 +5,18 @@
 
 ---
 
-## 📋 Test Cases
+## Test Cases
 
 | # | Description | Search Term | Parallel? |
 |---|-------------|-------------|-----------|
-| TC1 | Navigate to Amazon → search iPhone → add to cart → print price | `iPhone` | ✅ Yes |
-| TC2 | Navigate to Amazon → search Galaxy → add to cart → print price | `Samsung Galaxy smartphone` | ✅ Yes |
+| TC1 | Navigate to Amazon → search iPhone → add to cart → print price | `iPhone` |  Yes |
+| TC2 | Navigate to Amazon → search Galaxy → add to cart → print price | `Samsung Galaxy smartphone` | Yes |
 
 Parallelism is configured via **TestNG suite XML** (`testng.xml`) using `parallel="tests" thread-count="2"`. Each test gets its own **isolated `WebDriver` instance** via `ThreadLocal`, so they never share browser state.
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 amazon-selenium-tests/
@@ -41,7 +41,7 @@ amazon-selenium-tests/
 
 ---
 
-## ⚙️ Prerequisites
+## Prerequisites
 
 | Tool | Minimum Version | Check Command |
 |------|----------------|---------------|
@@ -53,7 +53,7 @@ amazon-selenium-tests/
 
 ---
 
-## 🚀 Quick Start (Local Parallel Execution)
+## Quick Start (Local Parallel Execution)
 
 ### 1. Clone the repository
 ```bash
@@ -75,7 +75,7 @@ That's it! Maven reads `testng.xml`, which launches **TC1 and TC2 simultaneously
 
 ---
 
-## 🖥️ Expected Console Output
+## Expected Console Output
 
 When the tests run, you will see price output like:
 
@@ -83,24 +83,24 @@ When the tests run, you will see price output like:
 ═════════════════════════════════════════════════════════════
   🧪  TEST CASE 1 – iPhone
 ═════════════════════════════════════════════════════════════
-  📍 Step 1: Navigating to Amazon.com and searching for 'iPhone' …
-  ✅  Search results page loaded.
-  📍 Step 2: Opening first iPhone product result …
-  ✅  Product Title : "Apple iPhone 15 (128 GB) - Black"
-  📍 Step 3: Extracting product price …
+  Step 1: Navigating to Amazon.com and searching for 'iPhone' …
+  Search results page loaded.
+  Step 2: Opening first iPhone product result …
+  Product Title : "Apple iPhone 15 (128 GB) - Black"
+  Step 3: Extracting product price …
   ───────────────────────────────────────────────────────────────
-  💰  iPhone Price  :  $799.00
+    iPhone Price  :  $799.00
   ───────────────────────────────────────────────────────────────
-  📍 Step 4: Adding iPhone to cart …
-  ✅  Product successfully added to cart!
-  🛒  Cart item count after add: 1
+   Step 4: Adding iPhone to cart …
+    Product successfully added to cart!
+    Cart item count after add: 1
 
 ═════════════════════════════════════════════════════════════
-  📋  TC1 SUMMARY – iPhone
+   TC1 SUMMARY – iPhone
   ─────────────────────────────────────────────────────────
   Product    : Apple iPhone 15 (128 GB) - Black
   Price      : $799.00
-  In Cart    : Yes ✅
+  In Cart    : Yes 
   Cart Count : 1
 ═════════════════════════════════════════════════════════════
 ```
@@ -109,7 +109,7 @@ When the tests run, you will see price output like:
 
 ---
 
-## 🔧 Running Individual Test Cases
+##  Running Individual Test Cases
 
 Run only TC1 (iPhone):
 ```bash
@@ -123,7 +123,7 @@ mvn test -Dtest=TC2_GalaxyTest
 
 ---
 
-## ☁️ Bonus: Run on LambdaTest Cloud
+##  Bonus: Run on LambdaTest Cloud
 
 ### Step 1 – Sign up at LambdaTest
 Go to [https://www.lambdatest.com](https://www.lambdatest.com) and create a free account.
@@ -158,7 +158,7 @@ Both tests will run **in parallel on LambdaTest's cloud grid** (Windows 10 / Chr
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Technology | Purpose |
 |-----------|---------|
@@ -171,7 +171,7 @@ Both tests will run **in parallel on LambdaTest's cloud grid** (Windows 10 / Chr
 
 ---
 
-## 📐 Parallel Execution Architecture
+##  Parallel Execution Architecture
 
 ```
 mvn test
@@ -195,7 +195,7 @@ mvn test
 
 ---
 
-## ❓ Troubleshooting
+## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -207,7 +207,7 @@ mvn test
 
 ---
 
-## 👩‍💻 Author
+## Author
 
 **Aastha Gupta**  
 Customer Engineering Intern Assignment – TestMu AI (LambdaTest)
