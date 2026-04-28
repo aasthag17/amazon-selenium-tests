@@ -1,0 +1,31 @@
+# Maven build output
+target/
+
+# Locally downloaded Maven binary (install Maven separately, see README)
+apache-maven-*/
+maven.tar.gz
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# Environment / Secrets
+.env
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<!--
+  LOCAL PARALLEL SUITE
+  ─────────────────────────────────────────────────────────────────────────────
+  Runs TC1 (iPhone) and TC2 (Galaxy) in parallel using 2 threads.
+  Each test gets its own isolated ChromeDriver instance via @BeforeMethod.
+
+  Run with:  mvn test  (or)  mvn test -P local
+-->
+<suite name="Amazon Automation Suite – Local" parallel="tests" thread-count="2" verbose="2">
+
+  <test name="TC1 – iPhone Search and Add to Cart">
+    <classes>
+      <class name="com.amazon.automation.tests.TC1_IphoneTest"/>
+    </classes>
+  </test>
+
+  <test name="TC2 – Galaxy Search and Add to Cart">
+    <classes>
+      <class name="com.amazon.automation.tests.TC2_GalaxyTest"/>
+    </classes>
+  </test>
+
+</suite>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<!--
+  LAMBDATEST CLOUD PARALLEL SUITE
+  ─────────────────────────────────────────────────────────────────────────────
+  Runs TC1 and TC2 in parallel on LambdaTest's cloud grid.
+  Credentials are read from environment variables LT_USERNAME / LT_ACCESS_KEY
+  (set them in your shell or .env file before running).
+
+  Run with:  mvn test -P lambdatest -DLT_USERNAME=<u> -DLT_ACCESS_KEY=<k>
+-->
+<suite name="Amazon Automation Suite – LambdaTest Cloud" parallel="tests" thread-count="2" verbose="2">
+
+  <parameter name="browser"   value="Chrome"/>
+  <parameter name="version"   value="latest"/>
+  <parameter name="platform"  value="Windows 10"/>
+
+  <test name="TC1 – iPhone (LambdaTest)">
+    <classes>
+      <class name="com.amazon.automation.tests.TC1_IphoneTest"/>
+    </classes>
+  </test>
+
+  <test name="TC2 – Galaxy (LambdaTest)">
+    <classes>
+      <class name="com.amazon.automation.tests.TC2_GalaxyTest"/>
+    </classes>
+  </test>
+
+</suite>
