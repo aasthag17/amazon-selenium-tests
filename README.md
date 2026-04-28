@@ -2,9 +2,10 @@
 **Aastha Gupta**
 
 Automated test suite using **Java + Selenium WebDriver + TestNG** that:
-- **TC1**: Searches Amazon for an iPhone, adds to cart, prints price to console
-- **TC2**: Searches Amazon for a Samsung Galaxy device, adds to cart, prints price to console
-- Both tests run **in parallel** simultaneously
+- **Test Case 1**: Navigates to Amazon.com, searches for an iPhone, adds it to the cart, and prints the device price to the console.
+- **Test Case 2**: Navigates to Amazon.com, searches for a Galaxy device, adds it to the cart, and prints the device price to the console.
+- **Parallel Execution**: Both tests are configured to run in parallel simultaneously.
+- **Cloud Execution**: Bonus points achieved by integrating with LambdaTest Cloud.
 
 ---
 
@@ -14,68 +15,34 @@ Automated test suite using **Java + Selenium WebDriver + TestNG** that:
 - Google Chrome (latest)
 - Internet connection
 
-> Maven is **bundled** in the repo – no installation needed.
+> **Note:** Maven is **bundled** in the repository – no external Maven installation is needed!
 
 ---
 
-## How to Run
+## How to Run Locally
 
-### Run TC1 + TC2 in Parallel (Local)
+To execute Test Case 1 and Test Case 2 in parallel on your local machine, simply run the provided shell script from the project root:
 
 ```bash
 ./run.sh
 ```
 
-### Run a single test
+### Expected Local Console Output
 
-```bash
-# iPhone only
-./apache-maven-3.9.6/bin/mvn test -Dtest=TC1_IphoneTest
-
-# Galaxy only
-./apache-maven-3.9.6/bin/mvn test -Dtest=TC2_GalaxyTest
-```
-
----
-
-## Expected Console Output
+You will see the steps interleaved, and eventually both prices printed:
 
 ```
-═════════════════════════════════════════════════════════════════
-  TEST CASE 1 – iPhone
-═════════════════════════════════════════════════════════════════
-  Step 1: Searching Amazon for 'Apple iPhone 15' …
-  Search results loaded.
-  Step 2: Opening first eligible iPhone product …
-  Product : "Apple iPhone 15, 128GB, Black - Unlocked"
-  Step 3: Extracting price …
-  ───────────────────────────────────────────────────────────────
-  iPhone Price  :  $699.00
-  ───────────────────────────────────────────────────────────────
-  Step 4: Adding to cart …
-  Added to cart!
-
-═════════════════════════════════════════════════════════════════
-  TC1 SUMMARY – iPhone
-  ───────────────────────────────────────────────────────────────
-  Product : Apple iPhone 15, 128GB, Black - Unlocked
-  Price   : $699.00
-  In Cart : Yes 
-  Cart    : 1
-═════════════════════════════════════════════════════════════════
+  💰  Samsung Galaxy Price  :  INR62,445.61
+  💰  iPhone Price  :  INR54,782.66
 ```
-
-*(TC2 output appears interleaved since both run at the same time.)*
-
----
 
 
 ## Tech Stack
 
-| | |
+| Component | Technology |
 |---|---|
 | Language | Java 11 |
 | Automation | Selenium WebDriver 4.18 |
 | Test Runner | TestNG 7.9 |
-| Driver Manager | WebDriverManager 5.8 |
+| Cloud Grid | LambdaTest W3C |
 | Build Tool | Maven 3.9.6 (bundled) |

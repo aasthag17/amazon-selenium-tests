@@ -12,6 +12,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.Collections;
 
 /**
  * DriverConfig
@@ -140,9 +141,20 @@ public class DriverConfig {
 
         String hubURL = String.format(LT_HUB, username, accessKey);
         try {
-            WebDriver driver = new RemoteWebDriver(new URL(hubURL), caps);
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
+            // Use ClientConfig with extended timeouts (free LT accounts need longer waits)
+            org.openqa.selenium.remote.http.ClientConfig clientConfig =
+                org.openqa.selenium.remote.http.ClientConfig.defaultConfig()
+                    .connectionTimeout(Duration.ofMinutes(3))
+                    .readTimeout(Duration.ofMinutes(10));
+
+            org.openqa.selenium.remote.HttpCommandExecutor executor =
+                new org.openqa.selenium.remote.HttpCommandExecutor(
+                    Collections.emptyMap(), new URL(hubURL), clientConfig);
+
+            WebDriver driver = new RemoteWebDriver(executor, caps);
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(60));
+            driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(30));
             return driver;
         } catch (MalformedURLException e) {
             throw new RuntimeException("[DriverConfig] Invalid LambdaTest hub URL: " + hubURL, e);
