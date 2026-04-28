@@ -69,27 +69,6 @@ Automated test suite using **Java + Selenium WebDriver + TestNG** that:
 
 ---
 
-## Bonus: Run on LambdaTest Cloud
-
-### Step 1 – Sign up
-Go to [lambdatest.com](https://www.lambdatest.com) → Create free account
-
-### Step 2 – Get credentials
-Go to **Profile → Account Settings** → copy your **Username** and **Access Key**
-
-### Step 3 – Run
-
-```bash
-./apache-maven-3.9.6/bin/mvn test -P lambdatest \
-  -DLT_USERNAME=your_actual_username \
-  -DLT_ACCESS_KEY=your_actual_access_key
-```
-
-After the run, view video recordings at [app.lambdatest.com/automation](https://app.lambdatest.com/automation)
-
-> **Note:** Replace `your_actual_username` and `your_actual_access_key` with your real LambdaTest credentials. Using placeholder values will cause a 401 error.
-
----
 
 ## Tech Stack
 
