@@ -32,8 +32,8 @@ To execute Test Case 1 and Test Case 2 in parallel on your local machine, simply
 You will see the steps interleaved, and eventually both prices printed:
 
 ```
-  💰  Samsung Galaxy Price  :  INR62,445.61
-  💰  iPhone Price  :  INR54,782.66
+    Samsung Galaxy Price  :  INR62,445.61
+    iPhone Price  :  INR54,782.66
 ```
 
 ---
@@ -41,8 +41,6 @@ You will see the steps interleaved, and eventually both prices printed:
 ## Bonus: How to Run on LambdaTest Cloud
 
 This project is fully integrated with LambdaTest to run the tests on a cloud grid. 
-
-> ⚠️ **Important for Free Tier Users:** Free LambdaTest accounts only allow **1 concurrent session** and often place test requests into a **queue**, which can result in long wait times or timeouts while connecting.
 
 ### Step 1 – Get Credentials
 1. Sign up/Log in at [lambdatest.com](https://www.lambdatest.com)
