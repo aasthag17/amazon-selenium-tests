@@ -66,15 +66,15 @@ public class TC1_IphoneTest {
 
     private static void printBanner(String s) {
         System.out.println("\n" + "═".repeat(65));
-        System.out.println("    " + s);
+        System.out.println(" 🧪 " + s);
         System.out.println("═".repeat(65));
     }
     private static void sep()      { System.out.println("  " + "─".repeat(63)); }
-    private static void log(String m) { System.out.println("   " + m); }
+    private static void log(String m) { System.out.println(" 📍  " + m); }
     private static void printSummary(String h, String title, String price,
                                       boolean added, String cart) {
         System.out.println("\n" + "═".repeat(65));
-        System.out.println("    " + h);
+        System.out.println(" 📋 " + h);
         System.out.println("  " + "─".repeat(63));
         System.out.println("  Product : " + title);
         System.out.println("  Price   : " + price);
