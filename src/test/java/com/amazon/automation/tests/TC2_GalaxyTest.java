@@ -33,29 +33,29 @@ public class TC2_GalaxyTest {
         // Step 1: Search
         log("Step 1: Searching Amazon for 'Samsung Galaxy smartphone' …");
         AmazonHelper.searchAmazon(driver, "Samsung Galaxy smartphone");
-        log("✅  Search results loaded.");
+        log(" Search results loaded.");
 
         // Step 2: Open best product (tries up to 3 results for price + ATC)
         log("Step 2: Opening first Galaxy product …");
         AmazonHelper.openFirstProduct(driver);
 
         String title = AmazonHelper.extractTitle(driver);
-        log("✅  Product : \"" + title + "\"");
+        log("  Product : \"" + title + "\"");
 
         // Step 3: Print price to console  ← REQUIRED BY ASSIGNMENT
         log("Step 3: Extracting price …");
         String price = AmazonHelper.extractPrice(driver);
         sep();
-        System.out.println("  💰  Samsung Galaxy Price  :  " + price);
+        System.out.println("   Samsung Galaxy Price  :  " + price);
         sep();
 
         if ("Price not found".equals(price))
-            System.out.println("  ⚠️   Price hidden – may need sign-in.");
+            System.out.println("    Price hidden – may need sign-in.");
 
         // Step 4: Add to cart
         log("Step 4: Adding to cart …");
         boolean added = AmazonHelper.addToCart(driver);
-        log(added ? "✅  Added to cart!" : "⚠️   Could not add (variant selection may be needed).");
+        log(added ? " Added to cart!" : "Could not add (variant selection may be needed).");
 
         String cartCount = AmazonHelper.getCartCount(driver);
         log("🛒  Cart count: " + cartCount);
@@ -78,7 +78,7 @@ public class TC2_GalaxyTest {
         System.out.println("  " + "─".repeat(63));
         System.out.println("  Product : " + title);
         System.out.println("  Price   : " + price);
-        System.out.println("  In Cart : " + (added ? "Yes ✅" : "No ⚠️"));
+        System.out.println("  In Cart : " + (added ? "Yes " : "No"));
         System.out.println("  Cart    : " + cart);
         System.out.println("═".repeat(65) + "\n");
     }
