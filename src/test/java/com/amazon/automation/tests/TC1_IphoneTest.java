@@ -10,6 +10,11 @@ import org.testng.annotations.*;
 /**
  * TC1 - iPhone Search, Add to Cart, Print Price.
  * Runs in parallel with TC2_GalaxyTest via testng.xml / testng-lambdatest.xml.
+ *
+ * Robustness:
+ *   - Skips "Renewed" / "Refurbished" listings
+ *   - Sets US delivery ZIP to unblock geo-restricted Add to Cart
+ *   - Auto-selects variants (color, storage, size) before Add to Cart
  */
 public class TC1_IphoneTest {
 
@@ -24,11 +29,10 @@ public class TC1_IphoneTest {
     public void tearDown(ITestResult result) {
         WebDriver d = driverHolder.get();
         if (d != null) {
-            // Report pass/fail back to LambdaTest dashboard
             try {
                 String status = result.isSuccess() ? "passed" : "failed";
                 String reason = result.isSuccess()
-                    ? "TC1 completed successfully"
+                    ? "TC1 iPhone test passed"
                     : (result.getThrowable() != null
                         ? result.getThrowable().getMessage() : "TC1 failed");
                 ((JavascriptExecutor) d).executeScript(
@@ -45,17 +49,16 @@ public class TC1_IphoneTest {
 
         printBanner("TEST CASE 1 - iPhone");
 
-        // Step 1: Search
+        // Step 1: Search (direct URL, bypasses homepage bot-check)
         log("Step 1: Searching Amazon for 'Apple iPhone 15'...");
         AmazonHelper.searchAmazon(driver, "Apple iPhone 15");
-        log("Search results loaded.");
 
-        // Step 2: Open first product
-        log("Step 2: Opening first iPhone product...");
-        AmazonHelper.openFirstProduct(driver);
+        // Step 2: Open first non-Renewed product, set US delivery ZIP
+        log("Step 2: Opening best available iPhone product (skipping Renewed)...");
+        AmazonHelper.openFirstProduct(driver, true);  // true = skip Renewed
 
         String title = AmazonHelper.extractTitle(driver);
-        log("Product: \"" + title + "\"");
+        log("Product: " + title);
 
         // Step 3: Print price to console  (required by assignment)
         log("Step 3: Extracting price...");
@@ -64,25 +67,16 @@ public class TC1_IphoneTest {
         System.out.println("  iPhone Price: " + price);
         separator();
 
-        if ("Price not found".equals(price)) {
-            System.out.println("  [INFO] Price not visible on this listing.");
-        }
-
-        // Step 4: Add to cart (auto-handles variant selection if needed)
+        // Step 4: Add to cart (auto-handles variants + retries)
         log("Step 4: Adding to cart...");
         boolean added = AmazonHelper.addToCart(driver);
-        log(added ? "Added to cart successfully." : "Could not add to cart.");
+        log(added ? "Added to cart successfully." : "Could not add to cart on this listing.");
 
         String cartCount = AmazonHelper.getCartCount(driver);
         log("Cart count: " + cartCount);
 
-        // Summary
         printSummary("TC1 SUMMARY - iPhone", title, price, added, cartCount);
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static void printBanner(String label) {
         System.out.println("\n" + "=".repeat(65));

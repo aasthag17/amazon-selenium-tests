@@ -6,23 +6,29 @@ import org.openqa.selenium.support.ui.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * AmazonHelper - thread-safe, stateless helper for Amazon.com interactions.
  *
- * Strategy:
+ * Key strategies:
  *   1. Navigate directly to /s?k=<query>  (bypasses homepage bot-check)
- *   2. Click first organic result
- *   3. If the product page shows a variant-selection prompt ("Please choose"),
- *      auto-select the first available option for each dimension (size, color,
- *      storage, etc.) so the Add-to-Cart button becomes active.
+ *   2. Collect up to 5 organic result URLs, skip "Renewed" / "Refurbished"
+ *   3. On each product page:
+ *        a. Set delivery to a US ZIP (fixes geo-restriction "cannot ship" errors)
+ *        b. Auto-select required variants (color, size, storage)
+ *        c. Click Add to Cart and wait for confirmation
+ *   4. Move to next result if Add to Cart still fails
  */
 public class AmazonHelper {
 
     private static final Duration SHORT  = Duration.ofSeconds(8);
-    private static final Duration MEDIUM = Duration.ofSeconds(25);
+    private static final Duration MEDIUM = Duration.ofSeconds(20);
     private static final Duration LONG   = Duration.ofSeconds(45);
+
+    // A real US ZIP — avoids "cannot ship to your location" blocks on LambdaTest
+    private static final String US_ZIP = "10001";
 
     // -------------------------------------------------------------------------
     // Search
@@ -32,115 +38,164 @@ public class AmazonHelper {
         removeWebdriverFlag(driver);
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String url = "https://www.amazon.com/s?k=" + encoded;
-        System.out.println("[AmazonHelper] Loading: " + url);
+        System.out.println("[AmazonHelper] Navigating to: " + url);
         driver.get(url);
         removeWebdriverFlag(driver);
-        dismissLocationPopup(driver);
+        dismissPopups(driver);
 
         new WebDriverWait(driver, LONG).until(ExpectedConditions.or(
             ExpectedConditions.presenceOfElementLocated(
                 By.cssSelector("[data-component-type='s-search-result']")),
             ExpectedConditions.presenceOfElementLocated(By.id("twotabsearchtextbox"))
         ));
-    }
-
-    public static void dismissLocationPopup(WebDriver driver) {
-        try {
-            new WebDriverWait(driver, SHORT).until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector(
-                    "button[data-action='a-popover-close'], " +
-                    "input[data-action='a-popover-close'], " +
-                    "#glow-ingress-block button"
-                ))
-            ).click();
-        } catch (Exception ignored) {}
-    }
-
-    public static void removeWebdriverFlag(WebDriver driver) {
-        try {
-            ((JavascriptExecutor) driver).executeScript(
-                "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});");
-        } catch (Exception ignored) {}
+        System.out.println("[AmazonHelper] Search results loaded.");
     }
 
     // -------------------------------------------------------------------------
-    // Product opener
+    // Smart product opener — tries up to 5 results, skips Renewed
     // -------------------------------------------------------------------------
 
     /**
-     * Clicks the first organic product result on the search page using JS,
-     * then waits for the product detail page to load.
+     * Opens the best available product from the search results:
+     * - Collects up to 5 organic result URLs (no sponsored)
+     * - Skips products with "Renewed" or "Refurbished" in their title
+     * - Sets US delivery ZIP on each product page to unblock Add to Cart
+     * - Returns after successfully opening a product with a visible title
      */
     public static void openFirstProduct(WebDriver driver) {
+        openFirstProduct(driver, false);
+    }
+
+    public static void openFirstProduct(WebDriver driver, boolean skipRenewed) {
         WebDriverWait wait = new WebDriverWait(driver, LONG);
 
         wait.until(ExpectedConditions.presenceOfElementLocated(
             By.cssSelector("[data-component-type='s-search-result']")));
         removeWebdriverFlag(driver);
 
-        String[] linkSelectors = {
-            "[data-component-type='s-search-result']:not([data-sponsored-label-info]) h2 a",
-            "[data-component-type='s-search-result'] h2 a",
-            "[data-component-type='s-search-result'] a[href*='/dp/']"
-        };
+        // Collect result URLs (strings) to avoid stale element issues
+        List<String> urls = collectResultUrls(driver, 5);
+        if (urls.isEmpty()) throw new NoSuchElementException(
+            "[AmazonHelper] No product URLs found on search results page.");
 
-        WebElement target = null;
-        for (String sel : linkSelectors) {
-            List<WebElement> found = driver.findElements(By.cssSelector(sel));
-            if (!found.isEmpty()) { target = found.get(0); break; }
+        System.out.println("[AmazonHelper] Found " + urls.size() + " result URLs to try.");
+
+        String searchUrl = driver.getCurrentUrl();
+
+        for (int i = 0; i < urls.size(); i++) {
+            String productUrl = urls.get(i);
+            System.out.println("[AmazonHelper] Trying result " + (i + 1) + ": " + productUrl);
+
+            driver.get(productUrl);
+            removeWebdriverFlag(driver);
+            dismissPopups(driver);
+
+            // Wait for product title
+            try {
+                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("productTitle")));
+            } catch (TimeoutException e) {
+                System.out.println("[AmazonHelper] No product title on result " + (i + 1) + " — skipping.");
+                driver.get(searchUrl);
+                continue;
+            }
+
+            String title = extractTitle(driver);
+
+            // Skip Renewed / Refurbished listings if requested
+            if (skipRenewed) {
+                String lower = title.toLowerCase();
+                if (lower.contains("renewed") || lower.contains("refurbished")) {
+                    System.out.println("[AmazonHelper] Skipping Renewed product: " + title);
+                    driver.get(searchUrl);
+                    sleep(500);
+                    continue;
+                }
+            }
+
+            // Set US delivery ZIP to unblock geo-restricted Add to Cart
+            setDeliveryZip(driver);
+
+            System.out.println("[AmazonHelper] Opened product: " + title);
+            return;
         }
 
-        if (target == null) throw new NoSuchElementException(
-            "No product links found on: " + driver.getCurrentUrl());
-
-        System.out.println("[AmazonHelper] Clicking first result...");
-        ((JavascriptExecutor) driver).executeScript(
-            "arguments[0].scrollIntoView({block:'center'});", target);
-        sleep(300);
-        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", target);
-
-        wait.until(ExpectedConditions.presenceOfElementLocated(By.id("productTitle")));
-        removeWebdriverFlag(driver);
-        dismissLocationPopup(driver);
+        throw new NoSuchElementException(
+            "[AmazonHelper] No suitable product found after trying all results.");
     }
 
     // -------------------------------------------------------------------------
-    // Variant selection  (fixes "Please choose a variation" alert)
+    // Delivery location fix (unblocks "cannot ship" geo-restriction)
     // -------------------------------------------------------------------------
 
     /**
-     * Detects any unselected variant dimension (size, color, storage, etc.) and
-     * clicks the first available (non-disabled) option for each.
-     *
-     * Amazon renders variant selectors in two ways:
-     *   A) Swatch tiles  - li elements inside #variation_<dimension>
-     *   B) Dropdown      - select element inside #variation_<dimension>
-     *
-     * We try both styles and click/select the first enabled option for every
-     * dimension present on the page.
-     *
-     * @return true if at least one variant was selected, false if none needed.
+     * Clicks the delivery location widget and sets ZIP to US_ZIP.
+     * This is required when LambdaTest's machine is detected as non-US,
+     * which makes Amazon show "This item cannot be shipped to your location."
      */
+    public static void setDeliveryZip(WebDriver driver) {
+        try {
+            // Check if the delivery-block is present
+            List<WebElement> deliveryBlock = driver.findElements(
+                By.cssSelector("#nav-global-location-popover-link, #glow-ingress-block"));
+            if (deliveryBlock.isEmpty()) return;
+
+            ((JavascriptExecutor) driver).executeScript(
+                "arguments[0].click();", deliveryBlock.get(0));
+            sleep(800);
+
+            // Type ZIP into the ZIP field
+            WebDriverWait shortWait = new WebDriverWait(driver, SHORT);
+            WebElement zipInput = shortWait.until(
+                ExpectedConditions.visibilityOfElementLocated(
+                    By.cssSelector("input[data-action='GLUXZipUpdateInput'], " +
+                                   "#GLUXZipUpdateInput")));
+            zipInput.clear();
+            zipInput.sendKeys(US_ZIP);
+            sleep(300);
+
+            // Click Apply
+            WebElement applyBtn = driver.findElement(
+                By.cssSelector("span[data-action='GLUXZipUpdate'] input, " +
+                               "#GLUXZipUpdate input, " +
+                               "input[aria-labelledby='GLUXZipUpdate-announce']"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", applyBtn);
+            sleep(1000);
+
+            // Dismiss the popup
+            try {
+                WebElement done = new WebDriverWait(driver, SHORT).until(
+                    ExpectedConditions.elementToBeClickable(
+                        By.cssSelector("#GLUXConfirmClose, " +
+                                       "[data-action='GLUXConfirmClose'] input")));
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", done);
+                sleep(600);
+            } catch (Exception ignored) {}
+
+            System.out.println("[AmazonHelper] Delivery ZIP set to " + US_ZIP);
+        } catch (Exception e) {
+            System.out.println("[AmazonHelper] Could not set delivery ZIP: " + e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Variant selection (fixes "Please choose a variation" alert)
+    // -------------------------------------------------------------------------
+
     public static boolean selectDefaultVariants(WebDriver driver) {
         boolean anySelected = false;
 
-        // --- Style A: swatch / button tiles ---
-        // Each dimension wrapper has id="variation_<name>"
+        // Style A: swatch / button tiles
         List<WebElement> swatchGroups = driver.findElements(
             By.cssSelector("[id^='variation_']"));
 
         for (WebElement group : swatchGroups) {
             try {
-                // Skip if a tile is already selected
                 List<WebElement> selected = group.findElements(
-                    By.cssSelector("li.selected, li[class*='selected'], " +
-                                   "span.selection:not(:empty)"));
+                    By.cssSelector("li.selected, li[class*='selected'], span.selection:not(:empty)"));
                 if (!selected.isEmpty()) continue;
 
-                // Click the first non-disabled tile
                 List<WebElement> tiles = group.findElements(
-                    By.cssSelector("li:not(.dimmed):not([class*='unavailable'])" +
-                                   ":not([class*='disabled'])"));
+                    By.cssSelector("li:not(.dimmed):not([class*='unavailable']):not([class*='disabled'])"));
                 if (!tiles.isEmpty()) {
                     ((JavascriptExecutor) driver).executeScript(
                         "arguments[0].scrollIntoView({block:'center'});", tiles.get(0));
@@ -155,23 +210,19 @@ public class AmazonHelper {
             } catch (Exception ignored) {}
         }
 
-        // --- Style B: <select> dropdowns (some products use these) ---
+        // Style B: native <select> dropdowns
         List<WebElement> dropdowns = driver.findElements(
-            By.cssSelector("[id^='variation_'] select, " +
-                           "select[id*='native_dropdown_selected']"));
+            By.cssSelector("[id^='variation_'] select, select[id*='native_dropdown_selected']"));
 
         for (WebElement sel : dropdowns) {
             try {
-                org.openqa.selenium.support.ui.Select select =
-                    new org.openqa.selenium.support.ui.Select(sel);
-                if (select.getFirstSelectedOption().getAttribute("value") == null ||
-                    select.getFirstSelectedOption().getAttribute("value").isEmpty() ||
+                Select select = new Select(sel);
+                String firstVal = select.getFirstSelectedOption().getAttribute("value");
+                if (firstVal == null || firstVal.isEmpty() ||
                     select.getFirstSelectedOption().getText().toLowerCase().contains("select")) {
-                    // Pick the first real option (index 1 skips the placeholder)
                     List<WebElement> opts = select.getOptions();
                     for (int i = 1; i < opts.size(); i++) {
-                        if (!opts.get(i).getAttribute("class").contains("dropdownAvailable") ||
-                             opts.get(i).isEnabled()) {
+                        if (opts.get(i).isEnabled()) {
                             select.selectByIndex(i);
                             sleep(500);
                             anySelected = true;
@@ -187,10 +238,6 @@ public class AmazonHelper {
         return anySelected;
     }
 
-    /**
-     * Checks whether the page shows a "Please choose" / "Please select" prompt,
-     * indicating that variant selection is required before adding to cart.
-     */
     public static boolean hasVariantSelectionError(WebDriver driver) {
         try {
             List<WebElement> alerts = driver.findElements(By.cssSelector(
@@ -199,11 +246,37 @@ public class AmazonHelper {
                 "#variation_style_name_error_notification_message"));
             for (WebElement el : alerts) {
                 String text = el.getText().toLowerCase();
-                if (text.contains("please") || text.contains("choose") ||
-                    text.contains("select")) {
+                if (text.contains("please") || text.contains("choose") || text.contains("select")) {
                     return true;
                 }
             }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Check for geo-restriction error on product page
+    // -------------------------------------------------------------------------
+
+    public static boolean hasShippingRestriction(WebDriver driver) {
+        try {
+            List<WebElement> els = driver.findElements(By.cssSelector(
+                "#exports_desktop_qualifiedBuybox_tlc_feature_div, " +
+                "#buybox-see-all-buying-choices, " +
+                "#outOfStock, " +
+                ".a-color-error"));
+            for (WebElement el : els) {
+                String text = el.getText().toLowerCase();
+                if (text.contains("cannot be shipped") ||
+                    text.contains("not available") ||
+                    text.contains("unavailable") ||
+                    text.contains("no offers")) {
+                    return true;
+                }
+            }
+            // Also check the full page body for the error message
+            String body = driver.findElement(By.tagName("body")).getText().toLowerCase();
+            return body.contains("this item cannot be shipped to your selected delivery location");
         } catch (Exception ignored) {}
         return false;
     }
@@ -253,7 +326,7 @@ public class AmazonHelper {
             } catch (Exception ignored) {}
         }
 
-        // Last resort: combine .a-price-whole + .a-price-fraction
+        // Last resort: whole + fraction
         try {
             String w = (String) ((JavascriptExecutor) driver).executeScript(
                 "var w=document.querySelector('.a-price-whole');" +
@@ -270,13 +343,10 @@ public class AmazonHelper {
     // -------------------------------------------------------------------------
 
     /**
-     * Adds the current product to cart.
-     * If a "Please choose a variation" error appears after clicking Add to Cart,
-     * this method automatically selects the first available variant for every
-     * dimension and retries once.
-     *
-     * @return true if successfully added, false if the button was not found or
-     *         cart confirmation did not appear within the timeout.
+     * Adds the product to cart with full retry logic:
+     *   - Attempt 1: click Add to Cart
+     *   - If variant error: auto-select variants, retry
+     *   - Waits for cart confirmation dialog or URL change
      */
     public static boolean addToCart(WebDriver driver) {
         By btnSelector = By.cssSelector(
@@ -285,7 +355,6 @@ public class AmazonHelper {
             "#submit\\.add-to-cart, " +
             "[data-feature-id='add-to-cart'] input[type='submit']");
 
-        // Attempt 1 (and attempt 2 after variant fix if needed)
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 WebDriverWait wait = new WebDriverWait(driver, MEDIUM);
@@ -293,20 +362,18 @@ public class AmazonHelper {
                     ExpectedConditions.elementToBeClickable(btnSelector));
                 ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].scrollIntoView({block:'center'});", addBtn);
-                sleep(300);
+                sleep(400);
                 ((JavascriptExecutor) driver).executeScript("arguments[0].click();", addBtn);
 
-                // Wait briefly, then check for variant-selection error
                 sleep(800);
+
                 if (hasVariantSelectionError(driver)) {
                     System.out.println("[AmazonHelper] Variant selection required — selecting defaults...");
                     selectDefaultVariants(driver);
                     sleep(600);
-                    // Loop continues: retry the Add-to-Cart click on attempt 2
                     continue;
                 }
 
-                // Wait for any cart-confirmation signal
                 new WebDriverWait(driver, MEDIUM).until(ExpectedConditions.or(
                     ExpectedConditions.presenceOfElementLocated(
                         By.id("attachSiNoCoverage-announce")),
@@ -316,6 +383,7 @@ public class AmazonHelper {
                         By.cssSelector("#sw-atc-confirmation, #huc-v2-order-row-confirm-text")),
                     ExpectedConditions.urlContains("/cart")
                 ));
+                System.out.println("[AmazonHelper] Added to cart successfully.");
                 return true;
 
             } catch (TimeoutException e) {
@@ -324,13 +392,16 @@ public class AmazonHelper {
                     selectDefaultVariants(driver);
                     sleep(600);
                 } else {
-                    System.out.println("[AmazonHelper] Add to Cart not available on this product.");
+                    System.out.println("[AmazonHelper] Add to Cart timed out on attempt " + attempt);
                     return false;
                 }
+            } catch (NoSuchElementException e) {
+                System.out.println("[AmazonHelper] Add to Cart button not found.");
+                return false;
             }
         }
 
-        System.out.println("[AmazonHelper] Add to Cart failed after variant selection attempt.");
+        System.out.println("[AmazonHelper] Add to Cart failed after all attempts.");
         return false;
     }
 
@@ -340,8 +411,62 @@ public class AmazonHelper {
             String t = badge.getText().trim();
             if (t.isEmpty()) t = (String) ((JavascriptExecutor) driver)
                 .executeScript("return arguments[0].textContent;", badge);
-            return t != null ? t.trim() : "?";
-        } catch (Exception e) { return "?"; }
+            return t != null ? t.trim() : "0";
+        } catch (Exception e) { return "0"; }
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Collects up to maxCount product URLs from the current search results page.
+     * Prefers organic (non-sponsored) results.
+     */
+    private static List<String> collectResultUrls(WebDriver driver, int maxCount) {
+        List<String> urls = new ArrayList<>();
+
+        // Prefer non-sponsored results first
+        String[] selectors = {
+            "[data-component-type='s-search-result']:not([data-sponsored-label-info]) h2 a[href*='/dp/']",
+            "[data-component-type='s-search-result'] h2 a[href*='/dp/']",
+            "[data-component-type='s-search-result'] a[href*='/dp/']"
+        };
+
+        for (String sel : selectors) {
+            if (urls.size() >= maxCount) break;
+            List<WebElement> elements = driver.findElements(By.cssSelector(sel));
+            for (WebElement el : elements) {
+                if (urls.size() >= maxCount) break;
+                try {
+                    String href = el.getAttribute("href");
+                    if (href != null && href.contains("/dp/") && !urls.contains(href)) {
+                        urls.add(href);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        return urls;
+    }
+
+    public static void dismissPopups(WebDriver driver) {
+        try {
+            new WebDriverWait(driver, SHORT).until(
+                ExpectedConditions.elementToBeClickable(By.cssSelector(
+                    "button[data-action='a-popover-close'], " +
+                    "input[data-action='a-popover-close'], " +
+                    "#glow-ingress-block button"
+                ))
+            ).click();
+        } catch (Exception ignored) {}
+    }
+
+    public static void removeWebdriverFlag(WebDriver driver) {
+        try {
+            ((JavascriptExecutor) driver).executeScript(
+                "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});");
+        } catch (Exception ignored) {}
     }
 
     private static void sleep(long ms) {

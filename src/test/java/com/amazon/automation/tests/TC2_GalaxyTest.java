@@ -24,11 +24,10 @@ public class TC2_GalaxyTest {
     public void tearDown(ITestResult result) {
         WebDriver d = driverHolder.get();
         if (d != null) {
-            // Report pass/fail back to LambdaTest dashboard
             try {
                 String status = result.isSuccess() ? "passed" : "failed";
                 String reason = result.isSuccess()
-                    ? "TC2 completed successfully"
+                    ? "TC2 Galaxy test passed"
                     : (result.getThrowable() != null
                         ? result.getThrowable().getMessage() : "TC2 failed");
                 ((JavascriptExecutor) d).executeScript(
@@ -48,14 +47,13 @@ public class TC2_GalaxyTest {
         // Step 1: Search
         log("Step 1: Searching Amazon for 'Samsung Galaxy smartphone'...");
         AmazonHelper.searchAmazon(driver, "Samsung Galaxy smartphone");
-        log("Search results loaded.");
 
-        // Step 2: Open first product
-        log("Step 2: Opening first Galaxy product...");
-        AmazonHelper.openFirstProduct(driver);
+        // Step 2: Open first product, set US delivery ZIP
+        log("Step 2: Opening best available Galaxy product...");
+        AmazonHelper.openFirstProduct(driver, false);
 
         String title = AmazonHelper.extractTitle(driver);
-        log("Product: \"" + title + "\"");
+        log("Product: " + title);
 
         // Step 3: Print price to console  (required by assignment)
         log("Step 3: Extracting price...");
@@ -64,25 +62,16 @@ public class TC2_GalaxyTest {
         System.out.println("  Samsung Galaxy Price: " + price);
         separator();
 
-        if ("Price not found".equals(price)) {
-            System.out.println("  [INFO] Price not visible on this listing.");
-        }
-
-        // Step 4: Add to cart (auto-handles variant selection if needed)
+        // Step 4: Add to cart
         log("Step 4: Adding to cart...");
         boolean added = AmazonHelper.addToCart(driver);
-        log(added ? "Added to cart successfully." : "Could not add to cart.");
+        log(added ? "Added to cart successfully." : "Could not add to cart on this listing.");
 
         String cartCount = AmazonHelper.getCartCount(driver);
         log("Cart count: " + cartCount);
 
-        // Summary
         printSummary("TC2 SUMMARY - Samsung Galaxy", title, price, added, cartCount);
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static void printBanner(String label) {
         System.out.println("\n" + "=".repeat(65));
