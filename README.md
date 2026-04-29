@@ -47,16 +47,21 @@ This project is fully integrated with LambdaTest to run the tests on a cloud gri
 2. Go to **Profile → Account Settings** to copy your **Username** and **Access Key**.
 
 ### Step 2 – Run the Command
-Run the tests sequentially on LambdaTest (to comply with free tier concurrency limits) using the automated script:
+Run the tests in parallel on LambdaTest using the automated script:
 
 ```bash
 ./run_lambdatest.sh
 ```
 
-*(This script automatically exports your credentials and uses the bundled Maven instance to start the test).*
+*(This script automatically exports your credentials and uses the bundled Maven instance to start the parallel test suite).*
 
 ### Step 3 – View Results
 Once the execution finishes, you can view the video recordings and logs at the [LambdaTest Web Automation Dashboard](https://automation.lambdatest.com/build).
+
+### Successful Execution Proof
+Here is a screenshot of the successful parallel execution on LambdaTest:
+![alt text](image.png)
+![LambdaTest Success Dashboard](lambdatest_success.png)
 
 ---
 
