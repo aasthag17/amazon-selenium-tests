@@ -73,14 +73,16 @@ public class AmazonHelper {
             By.cssSelector("[data-component-type='s-search-result']")));
         removeWebdriverFlag(driver);
 
-        // Collect result URLs (strings) to avoid stale element issues
-        List<String> urls = collectResultUrls(driver, 5);
+        // Collect up to 10 result URLs to give more chances to find a new product
+        List<String> urls = collectResultUrls(driver, 10);
         if (urls.isEmpty()) throw new NoSuchElementException(
             "[AmazonHelper] No product URLs found on search results page.");
 
         System.out.println("[AmazonHelper] Found " + urls.size() + " result URLs to try.");
 
         String searchUrl = driver.getCurrentUrl();
+        String fallbackUrl   = null;  // best Renewed fallback if all are Renewed
+        String fallbackTitle = null;
 
         for (int i = 0; i < urls.size(); i++) {
             String productUrl = urls.get(i);
@@ -94,28 +96,38 @@ public class AmazonHelper {
             try {
                 wait.until(ExpectedConditions.presenceOfElementLocated(By.id("productTitle")));
             } catch (TimeoutException e) {
-                System.out.println("[AmazonHelper] No product title on result " + (i + 1) + " — skipping.");
+                System.out.println("[AmazonHelper] No product title on result " + (i + 1) + " - skipping.");
                 driver.get(searchUrl);
+                sleep(300);
                 continue;
             }
 
             String title = extractTitle(driver);
+            String lower  = title.toLowerCase();
+            boolean isRenewed = lower.contains("renewed") || lower.contains("refurbished");
 
-            // Skip Renewed / Refurbished listings if requested
-            if (skipRenewed) {
-                String lower = title.toLowerCase();
-                if (lower.contains("renewed") || lower.contains("refurbished")) {
-                    System.out.println("[AmazonHelper] Skipping Renewed product: " + title);
-                    driver.get(searchUrl);
-                    sleep(500);
-                    continue;
-                }
+            if (skipRenewed && isRenewed) {
+                System.out.println("[AmazonHelper] Skipping Renewed product: " + title);
+                if (fallbackUrl == null) { fallbackUrl = productUrl; fallbackTitle = title; }
+                driver.get(searchUrl);
+                sleep(300);
+                continue;
             }
 
             // Set US delivery ZIP to unblock geo-restricted Add to Cart
             setDeliveryZip(driver);
-
             System.out.println("[AmazonHelper] Opened product: " + title);
+            return;
+        }
+
+        // All results were Renewed - use the first one as fallback rather than failing
+        if (skipRenewed && fallbackUrl != null) {
+            System.out.println("[AmazonHelper] All results are Renewed. Using fallback: " + fallbackTitle);
+            driver.get(fallbackUrl);
+            removeWebdriverFlag(driver);
+            dismissPopups(driver);
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.id("productTitle")));
+            setDeliveryZip(driver);
             return;
         }
 
