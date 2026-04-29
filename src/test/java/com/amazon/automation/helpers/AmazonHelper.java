@@ -173,14 +173,26 @@ public class AmazonHelper {
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", applyBtn);
             sleep(1000);
 
-            // Dismiss the popup
+            // Dismiss the popup (Done / Continue button)
             try {
                 WebElement done = new WebDriverWait(driver, SHORT).until(
                     ExpectedConditions.elementToBeClickable(
                         By.cssSelector("#GLUXConfirmClose, " +
-                                       "[data-action='GLUXConfirmClose'] input")));
+                                       "[data-action='GLUXConfirmClose'] input, " +
+                                       "input[name='glowDoneButton'], " +
+                                       ".a-popover-footer input")));
+                
+                // Get a reference to an element to wait for staleness
+                WebElement oldLocation = driver.findElement(By.id("nav-global-location-slot"));
+                
                 ((JavascriptExecutor) driver).executeScript("arguments[0].click();", done);
-                sleep(600);
+                
+                // Wait for the page to reload or the location to update
+                try {
+                    new WebDriverWait(driver, SHORT).until(ExpectedConditions.stalenessOf(oldLocation));
+                } catch (Exception ignored) {}
+                
+                sleep(2000); // Give it extra time to render the Add to Cart button
             } catch (Exception ignored) {}
 
             System.out.println("[AmazonHelper] Delivery ZIP set to " + US_ZIP);

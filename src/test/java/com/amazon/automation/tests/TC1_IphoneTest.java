@@ -50,8 +50,8 @@ public class TC1_IphoneTest {
         printBanner("TEST CASE 1 - iPhone");
 
         // Step 1: Search (direct URL, bypasses homepage bot-check)
-        log("Step 1: Searching Amazon for 'Apple iPhone 15'...");
-        AmazonHelper.searchAmazon(driver, "Apple iPhone 15");
+        log("Step 1: Searching Amazon for 'Apple iPhone 13'...");
+        AmazonHelper.searchAmazon(driver, "Apple iPhone 13");
 
         // Step 2: Open first non-Renewed product, set US delivery ZIP
         log("Step 2: Opening best available iPhone product (skipping Renewed)...");
