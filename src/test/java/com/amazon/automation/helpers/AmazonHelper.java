@@ -37,7 +37,8 @@ public class AmazonHelper {
     public static void searchAmazon(WebDriver driver, String query) {
         removeWebdriverFlag(driver);
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
-        String url = "https://www.amazon.com/s?k=" + encoded;
+        // Explicitly filter for "New" condition to avoid "Renewed" listings
+        String url = "https://www.amazon.com/s?k=" + encoded + "&rh=p_n_condition-type%3A6503240011";
         System.out.println("[AmazonHelper] Navigating to: " + url);
         driver.get(url);
         removeWebdriverFlag(driver);
@@ -410,18 +411,34 @@ public class AmazonHelper {
                 System.out.println("[AmazonHelper] Added to cart successfully.");
                 return true;
 
-            } catch (TimeoutException e) {
-                if (attempt == 1 && hasVariantSelectionError(driver)) {
-                    System.out.println("[AmazonHelper] Variant error on timeout — selecting defaults...");
-                    selectDefaultVariants(driver);
-                    sleep(600);
-                } else {
-                    System.out.println("[AmazonHelper] Add to Cart timed out on attempt " + attempt);
-                    return false;
+            } catch (TimeoutException | NoSuchElementException e) {
+                // If primary Add to Cart failed, try "See All Buying Options"
+                try {
+                    WebElement seeAllBtn = driver.findElement(By.cssSelector(
+                        "a[title='See All Buying Options'], #buybox-see-all-buying-choices a, #buybox-see-all-buying-choices-announce"));
+                    System.out.println("[AmazonHelper] Primary Add to Cart missing. Clicking 'See All Buying Options'...");
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", seeAllBtn);
+                    sleep(1500);
+
+                    // Wait for the side panel and click the first Add to Cart button in the list
+                    WebElement flyoutAddBtn = new WebDriverWait(driver, SHORT).until(
+                        ExpectedConditions.elementToBeClickable(
+                            By.cssSelector("#aod-offer-list input[name='submit.addToCart'], .aod-add-to-cart-button input")));
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", flyoutAddBtn);
+                    sleep(1500);
+                    
+                    System.out.println("[AmazonHelper] Added to cart from buying options panel successfully.");
+                    return true;
+                } catch (Exception ignored2) {
+                    if (attempt == 1 && hasVariantSelectionError(driver)) {
+                        System.out.println("[AmazonHelper] Variant error on timeout — selecting defaults...");
+                        selectDefaultVariants(driver);
+                        sleep(600);
+                    } else {
+                        System.out.println("[AmazonHelper] Add to Cart timed out on attempt " + attempt);
+                        return false;
+                    }
                 }
-            } catch (NoSuchElementException e) {
-                System.out.println("[AmazonHelper] Add to Cart button not found.");
-                return false;
             }
         }
 
