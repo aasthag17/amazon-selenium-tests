@@ -10,7 +10,7 @@
   mvn clean test -P lambdatest
 -->
 
-<suite name="Amazon Automation Suite - LambdaTest Cloud" parallel="none" verbose="2">
+<suite name="Amazon Automation Suite - LambdaTest Cloud" parallel="tests" thread-count="2" verbose="2">
 
   <!-- Common capabilities -->
   <parameter name="browser" value="Chrome"/>

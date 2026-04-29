@@ -12,7 +12,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.HashMap;
 
 /**
  * DriverConfig
@@ -120,40 +120,32 @@ public class DriverConfig {
 
         System.out.println("  [DriverConfig] Connecting to LambdaTest cloud as: " + username);
 
-        // ── W3C capabilities ────────────────────────────────────────────
+        // ── W3C capabilities (LambdaTest format) ─────────────────────────
         DesiredCapabilities caps = new DesiredCapabilities();
-        caps.setCapability("browserName",  "Chrome");
+        caps.setCapability("browserName", "Chrome");
         caps.setCapability("browserVersion", "latest");
 
-        // LambdaTest-specific options
-        java.util.Map<String, Object> ltOptions = new java.util.HashMap<>();
+        // LambdaTest-specific options map
+        HashMap<String, Object> ltOptions = new HashMap<>();
         ltOptions.put("username",    username);
         ltOptions.put("accessKey",   accessKey);
         ltOptions.put("platformName", "Windows 10");
         ltOptions.put("build",        "Amazon Automation – TestMu AI Assignment");
         ltOptions.put("project",      "Amazon Selenium Java");
+        // Per-thread test name for clear LambdaTest dashboard labeling
+        ltOptions.put("name",         Thread.currentThread().getName());
         ltOptions.put("video",        true);
         ltOptions.put("network",      true);
         ltOptions.put("console",      true);
-        ltOptions.put("selenium_version", "4.0.0");
-        ltOptions.put("w3c", true);
+        ltOptions.put("w3c",          true);
         caps.setCapability("LT:Options", ltOptions);
 
         String hubURL = String.format(LT_HUB, username, accessKey);
         try {
-            // Use ClientConfig with extended timeouts (free LT accounts need longer waits)
-            org.openqa.selenium.remote.http.ClientConfig clientConfig =
-                org.openqa.selenium.remote.http.ClientConfig.defaultConfig()
-                    .connectionTimeout(Duration.ofMinutes(3))
-                    .readTimeout(Duration.ofMinutes(10));
-
-            org.openqa.selenium.remote.HttpCommandExecutor executor =
-                new org.openqa.selenium.remote.HttpCommandExecutor(
-                    Collections.emptyMap(), new URL(hubURL), clientConfig);
-
-            WebDriver driver = new RemoteWebDriver(executor, caps);
+            // Simple, reliable RemoteWebDriver — no custom executor needed
+            WebDriver driver = new RemoteWebDriver(new URL(hubURL), caps);
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(60));
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(90));
             driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(30));
             return driver;
         } catch (MalformedURLException e) {
